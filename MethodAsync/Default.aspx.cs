@@ -134,7 +134,7 @@ namespace MethodAsync
                                         batch_ID INT,
                                         batch_sendXML[xml]
                                     );
-                                WHILE @i < 750
+                                WHILE @i < 150
                                 BEGIN
                                     INSERT INTO TEMPTeste
 
