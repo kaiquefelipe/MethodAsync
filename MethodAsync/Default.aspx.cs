@@ -134,7 +134,7 @@ namespace MethodAsync
                                         batch_ID INT,
                                         batch_sendXML[xml]
                                     );
-                                WHILE @i < 750
+                                WHILE @i < 150
                                 BEGIN
                                     INSERT INTO TEMPTeste
 
@@ -152,8 +152,9 @@ namespace MethodAsync
                     // SqlCommand object as the second parameter in the 
                     // BeginExecuteReader call, doing so makes it easier
                     // to call EndExecuteReader in the callback procedure.
-                    AsyncCallback callback = new AsyncCallback(HandleCallback);
-                    command.BeginExecuteReader(callback, command);
+                    // AsyncCallback callback = new AsyncCallback(HandleCallback);
+                    // command.BeginExecuteReader(callback, command);
+                    command.ExecuteNonQuery();
 
 
                     #region SELECT ASYNC
