@@ -127,7 +127,7 @@ namespace MethodAsync
                     connection = new SqlConnection(GetConnectionString());
                     // To emulate a long-running query, wait for 
                     // a few seconds before retrieving the real data.
-                    command = new SqlCommand("WAITFOR DELAY '0:0:5';" +
+                    command = new SqlCommand(
                                 @"DECLARE @i int = 0
                                 IF OBJECT_ID('TEMPTeste') IS NOT NULL DROP TABLE TEMPTeste
                                     CREATE TABLE TEMPTeste(
