@@ -109,7 +109,7 @@ namespace MethodAsync
             // If you do not include the Asynchronous Processing=true name/value pair,
             // you wo not be able to execute the command asynchronously.
 
-            return string.Format("DATA SOURCE={0}; INITIAL CATALOG={1}; USER ID={2}; Password={3}; MultipleActiveResultSets=True; Asynchronous Processing=true;", "mychurch.database.windows.net", "mychurch", "mychurch", "fxm@sterb1");
+            return string.Format("DATA SOURCE={0}; INITIAL CATALOG={1}; USER ID={2}; Password={3};", "mychurch.database.windows.net", "mychurch", "mychurch", "fxm@sterb1");
         }
 
         protected void Button1_Click(object sender, EventArgs e)
