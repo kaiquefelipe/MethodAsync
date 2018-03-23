@@ -56,7 +56,9 @@ namespace MethodAsync
                         // resultsTextBox.InnerText += (Environment.NewLine + "\r\nId: ");
                         resultsTextBox.InnerText += reader.GetFieldValue<int>(0).ToString();// + "\t" + ((!rdr.IsDBNull(1)) ? rdr["batch_sendXML"].ToString() : ""));
                         resultsTextBox.InnerText += (Environment.NewLine);
-
+                        //ScriptManager.RegisterClientScriptBlock(this, GetType(), "Alter", "document.getElementById('"+ resultsTextBox.ID + "').innerHTML += "+ reader.GetFieldValue<int>(0).ToString() +"", true);
+                        ScriptManager.RegisterClientScriptBlock(this, GetType(), "Alter", "alert(resultsTextBox.ID);", true);
+                        //ClientScript.RegisterClientScriptBlock(GetType(), "Alter", "document.getElementById('"+ resultsTextBox.ID + "').innerHTML += "+ reader.GetFieldValue<int>(0).ToString() + ";");
                         // DoIndependentWork();
                     }
                 }
@@ -132,7 +134,7 @@ namespace MethodAsync
                                         batch_ID INT,
                                         batch_sendXML[xml]
                                     );
-                                WHILE @i < 5
+                                WHILE @i < 750
                                 BEGIN
                                     INSERT INTO TEMPTeste
 
@@ -152,7 +154,7 @@ namespace MethodAsync
                     // to call EndExecuteReader in the callback procedure.
                     AsyncCallback callback = new AsyncCallback(HandleCallback);
                     command.BeginExecuteReader(callback, command);
-                    
+
 
                     #region SELECT ASYNC
                     //command = new SqlCommand(@"WAITFOR DELAY '0:0:5'; SELECT TOP 10 batch_ID FROM TEMPTeste", connection);
