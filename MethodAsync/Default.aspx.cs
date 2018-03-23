@@ -134,7 +134,7 @@ namespace MethodAsync
                                         batch_ID INT,
                                         batch_sendXML[xml]
                                     );
-                                WHILE @i < 150
+                                WHILE @i < 750
                                 BEGIN
                                     INSERT INTO TEMPTeste
 
@@ -154,7 +154,7 @@ namespace MethodAsync
                     // to call EndExecuteReader in the callback procedure.
                     // AsyncCallback callback = new AsyncCallback(HandleCallback);
                     // command.BeginExecuteReader(callback, command);
-                    command.ExecuteNonQuery();
+                    command.BeginExecuteReader();
 
 
                     #region SELECT ASYNC
