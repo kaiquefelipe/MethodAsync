@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading;
@@ -11,130 +12,103 @@ namespace MethodAsync
 {
     public partial class Default : System.Web.UI.Page
     {
-
-        // This flag ensures that the user does not attempt
-        // to restart the command or close the form while the 
-        // asynchronous command is executing.
-        private bool isExecuting = false;
-
-        // Because the overloaded version of BeginExecuteReader
-        // demonstrated here does not allow you to have the connection
-        // closed automatically, this example maintains the 
-        // connection object externally, so that it is available for closing.
         private SqlConnection connection = null;
-
-        // You need this delegate to update the status bar.
-        private delegate void DisplayStatusDelegate(string Text);
+        private SqlCommand command = null;
 
         protected void Page_Load(object sender, EventArgs e)
         {
             if (!IsPostBack)
-            {
                 Button1.Click += new EventHandler(Button1_Click);
-            }
-        }
-
-        private void DisplayStatus(string Text)
-        {
-            Label1.Text = Text;
-        }
-
-        private void HandleCallback(IAsyncResult result)
-        {
-            try
-            {
-                // Retrieve the original command object, passed
-                // to this procedure in the AsyncState property
-                // of the IAsyncResult parameter.
-                SqlCommand command = (SqlCommand)result.AsyncState;
-                SqlDataReader reader = command.EndExecuteReader(result);
-
-                if (reader.HasRows)
-                {
-                    while (reader.Read())
-                    {
-                        // resultsTextBox.InnerText += (Environment.NewLine + "\r\nId: ");
-                        resultsTextBox.InnerText += reader.GetFieldValue<int>(0).ToString();// + "\t" + ((!rdr.IsDBNull(1)) ? rdr["batch_sendXML"].ToString() : ""));
-                        resultsTextBox.InnerText += (Environment.NewLine);
-                        //ScriptManager.RegisterClientScriptBlock(this, GetType(), "Alter", "document.getElementById('"+ resultsTextBox.ID + "').innerHTML += "+ reader.GetFieldValue<int>(0).ToString() +"", true);
-                        ScriptManager.RegisterClientScriptBlock(this, GetType(), "Alter", "alert(resultsTextBox.ID);", true);
-                        //ClientScript.RegisterClientScriptBlock(GetType(), "Alter", "document.getElementById('"+ resultsTextBox.ID + "').innerHTML += "+ reader.GetFieldValue<int>(0).ToString() + ";");
-                        // DoIndependentWork();
-                    }
-                }
-
-                // You may not interact with the form and its contents
-                // from a different thread, and this callback procedure
-                // is all but guaranteed to be running from a different thread
-                // than the form. Therefore you cannot simply call code that 
-                // fills the grid, like this:
-                // FillGrid(reader);
-                // Instead, you must call the procedure from the form's thread.
-                // One simple way to accomplish this is to call the Invoke
-                // method of the form, which calls the delegate you supply
-                // from the form's thread. 
-                // FillGridDelegate del = new FillGridDelegate(FillGrid);
-                // Invoke(del, reader);
-                // Do not close the reader here, because it is being used in 
-                // a separate thread. Instead, have the procedure you have
-                // called close the reader once it is done with it.
-            }
-            catch (Exception)
-            {
-                // Because you are now running code in a separate thread, 
-                // if you do not handle the exception here, none of your other
-                // code catches the exception. Because there is none of 
-                // your code on the call stack in this thread, there is nothing
-                // higher up the stack to catch the exception if you do not 
-                // handle it here. You can either log the exception or 
-                // invoke a delegate (as in the non-error case in this 
-                // example) to display the error on the form. In no case
-                // can you simply display the error without executing a delegate
-                // as in the try block here. 
-                // You can create the delegate instance as you 
-                // invoke it, like this:
-                // Invoke(new DisplayStatusDelegate(DisplayStatus), "Error: " + ex.Message);
-            }
-            finally
-            {
-                isExecuting = false;
-            }
-        }
-
-        private string GetConnectionString()
-        {
-            // To avoid storing the connection string in your code, 
-            // you can retrieve it from a configuration file. 
-
-            // If you do not include the Asynchronous Processing=true name/value pair,
-            // you wo not be able to execute the command asynchronously.
-
-            return string.Format("DATA SOURCE={0}; INITIAL CATALOG={1}; USER ID={2}; Password={3}; MultipleActiveResultSets=True; Asynchronous Processing=true;", "mychurch.database.windows.net", "mychurch", "mychurch", "fxm@sterb1");
         }
 
         protected void Button1_Click(object sender, EventArgs e)
         {
-            if (isExecuting)
+            try
             {
-                ClientScript.RegisterStartupScript(GetType(), "Detalhes Exception", "alert('Already executing. Please wait until the current query has completed.');", true);
+                SetLabel("Connecting...");
+                #region USING BeginExecuteReader AND EndExecuteReader
+                //BeginEventHandler begin_hanlder = new BeginEventHandler(BeginExecuteReader);
+                //EndEventHandler end_handler = new EndEventHandler(EndExecuteReader);
+                //AddOnPreRenderCompleteAsync(begin_hanlder, end_handler);
+                #endregion
+
+                #region USING BeginExecuteNonQuery AND EndExecuteNonQuery
+                BeginEventHandler begin_hanlder = new BeginEventHandler(BeginNonQuery);
+                EndEventHandler end_handler = new EndEventHandler(EndNonQuery);
+                AddOnPreRenderCompleteAsync(begin_hanlder, end_handler);
+                #endregion
             }
-            else
+            catch (Exception ex)
             {
-                SqlCommand command = null;
-                try
+                SetLabel("Error: " + ex.Message);
+                if (connection != null)
+                    connection.Close();
+            }
+        }
+
+        #region USING BeginExecuteReader AND EndExecuteReader
+        IAsyncResult BeginExecuteReader(object sender, EventArgs e, AsyncCallback callback, object state)
+        {
+            connection = new SqlConnection(GetConnectionString());
+            // To emulate a long-running query, wait for 
+            // a few seconds before retrieving the real data.
+            command = new SqlCommand(
+                          @"SELECT Batch_ID, Batch_SendXml FROM eSocial_Batches",
+                connection);
+
+            connection.Open();
+
+            SetLabel("Executing...");
+            return command.BeginExecuteReader(callback, state);
+        }
+
+        void EndExecuteReader(IAsyncResult asyncResult)
+        {           
+            List<string> lString = new List<string>();
+            List<string> lStringXml = new List<string>();
+            try
+            {
+                SqlDataReader reader = command.EndExecuteReader(asyncResult);
+                while (!reader.IsClosed && reader.HasRows && reader.Read() && asyncResult.IsCompleted)
                 {
-                    DisplayStatus("Connecting...");
-                    connection = new SqlConnection(GetConnectionString());
-                    // To emulate a long-running query, wait for 
-                    // a few seconds before retrieving the real data.
-                    command = new SqlCommand(
-                                @"DECLARE @i int = 0
+                    lString.Add(reader["Batch_ID"].ToString() + Environment.NewLine);
+                    lStringXml.Add(reader["Batch_SendXml"].ToString() + Environment.NewLine);
+                    //for (int i = 0; i < reader.FieldCount; i++)
+                    //{
+                    //    strinng += reader.GetValue(i).ToString();
+                    //}
+                }
+
+                for (int i = 0; i < lString.Count; i++)
+                {
+                    resultsTextBox.InnerText += lString[i];
+                    resultsTextBox.InnerText += lStringXml[i];
+                    resultsTextBox.InnerText += "-------------------------------------------------";
+                }
+                ShowMessage("HAHA! DEU CERTOOO! OK");
+            }
+            catch (Exception ex)
+            {
+                ShowMessage("Error: " + ex.Message);
+            }
+        }
+
+        #endregion
+
+        #region USING BeginExecuteNonQuery AND EndExecuteNonQuery
+        IAsyncResult BeginNonQuery(object sender, EventArgs e, AsyncCallback callback, object state)
+        {
+            connection = new SqlConnection(GetConnectionString());
+            // To emulate a long-running query, wait for 
+            // a few seconds before retrieving the real data.
+            command = new SqlCommand(
+                        @"DECLARE @i int = 0
                                 IF OBJECT_ID('TEMPTeste') IS NOT NULL DROP TABLE TEMPTeste
                                     CREATE TABLE TEMPTeste(
                                         batch_ID INT,
                                         batch_sendXML[xml]
                                     );
-                                WHILE @i < 150
+                                WHILE @i < 10
                                 BEGIN
                                     INSERT INTO TEMPTeste
 
@@ -142,44 +116,49 @@ namespace MethodAsync
 
                                     SET @i = @i + 1
                                 END",
-                        connection);
+                connection);
 
-                    connection.Open();
+            connection.Open();
 
-                    DisplayStatus("Executing...");
-                    isExecuting = true;
-                    // Although it is not required that you pass the 
-                    // SqlCommand object as the second parameter in the 
-                    // BeginExecuteReader call, doing so makes it easier
-                    // to call EndExecuteReader in the callback procedure.
-                    // AsyncCallback callback = new AsyncCallback(HandleCallback);
-                    // command.BeginExecuteReader(callback, command);
-                    command.BeginExecuteReader();
+            SetLabel("Executing...");
+            return command.BeginExecuteNonQuery(callback, state);
+        }
 
+        void EndNonQuery(IAsyncResult asyncResult)
+        {
+            try
+            {
+                int rowCount = command.EndExecuteNonQuery(asyncResult);
+                
+                string rowText = " rows affected.";
+                if (rowCount == 1)                
+                    rowText = " row affected.";
 
-                    #region SELECT ASYNC
-                    //command = new SqlCommand(@"WAITFOR DELAY '0:0:5'; SELECT TOP 10 batch_ID FROM TEMPTeste", connection);
-
-                    //DisplayStatus("Executing the SELECT...");
-                    //isExecuting = true;
-                    //// Although it is not required that you pass the 
-                    //// SqlCommand object as the second parameter in the 
-                    //// BeginExecuteReader call, doing so makes it easier
-                    //// to call EndExecuteReader in the callback procedure.
-                    //AsyncCallback callbackSelect = new AsyncCallback(HandleCallback);
-                    //command.BeginExecuteReader(callbackSelect, command);
-                    #endregion
-
-                }
-                catch (Exception ex)
-                {
-                    DisplayStatus("Error: " + ex.Message);
-                    if (connection != null)
-                    {
-                        connection.Close();
-                    }
-                }
+                rowText = rowCount + rowText;
+                
+                ShowMessage(rowText);
             }
+            catch (Exception ex)
+            {
+                ShowMessage("Error: " + ex.Message);
+            }
+        }
+        #endregion
+
+        private void ShowMessage(string message)
+        {
+            Label1.Text = message;
+            ScriptManager.RegisterClientScriptBlock(this.Page, GetType(), "Alter", "<script>alert('"+ Label1.Text + "');</script>", false);
+        }
+
+        private void SetLabel(string v)
+        {
+            Label1.Text = v;
+        }
+
+        private string GetConnectionString()
+        {
+            return string.Format("DATA SOURCE={0}; INITIAL CATALOG={1}; USER ID={2}; Password={3}; MultipleActiveResultSets=True; Asynchronous Processing=true;", "mychurch.database.windows.net", "mychurch", "mychurch", "fxm@sterb1");
         }
     }
 }
